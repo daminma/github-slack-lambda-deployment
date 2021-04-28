@@ -10,7 +10,7 @@ jobs:
           - run: |
                     echo before
                     echo $GITHUB_ENV
-                    echo "latname=MA" >> $GITHUB_ENV
+                    echo "lastname=MA" >> $GITHUB_ENV
           - run: |
                   echo "lastname is ${{ env.lastname }}"
 
