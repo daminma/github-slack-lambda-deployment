@@ -9,6 +9,7 @@ jobs:
           - uses: dmagithub1/learnaction@master
           - run: |
                     echo before
+                    env | grep GITHUB
                     echo $GITHUB_ENV
                     echo "lastname=MA" >> $GITHUB_ENV
           - run: |
