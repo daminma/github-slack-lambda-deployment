@@ -25,9 +25,9 @@ jobs:
         run: |
            echo "${{ secrets.DMA_DEPLOYER_PRIVATE_KEY }}" > ./id_rsa
            chmod 400 id_rsa
-           GIT_SSH_COMMAND='ssh -i id_rsa -o IdentitiesOnly=yes' git clone git@github.com:daminma/github-slack-lambda-intergation.git .github/actions/github-slack-lambda-intergation
+           GIT_SSH_COMMAND='ssh -i id_rsa -o IdentitiesOnly=yes' git clone git@github.com:daminma/github-slack-lambda-intergration.git .github/actions/github-slack-lambda-intergration
       - name: Run assume-aws-role
-        uses: ./.github/actions/github-slack-lambda-intergation/actions/assume-aws-role
+        uses: ./.github/actions/github-slack-lambda-intergration/actions/assume-aws-role
         with:
            AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
            AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -39,7 +39,7 @@ jobs:
         run: aws sts get-caller-identity
  
       - name: Process Deployment Request
-        uses: ./.github/actions/github-slack-lambda-intergation/actions/process-deployment-request
+        uses: ./.github/actions/github-slack-lambda-intergration/actions/process-deployment-request
         with:
            DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
            SLACK_TOKEN: ${{ secrets.DMA_SLACKBOT_TOKEN }}
