@@ -52,4 +52,5 @@ jobs:
         with:
            DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
            SLACK_TOKEN: ${{ secrets.DMA_SLACKBOT_TOKEN }}
+           JOB_STATUS: ${{ job.status }}
 
