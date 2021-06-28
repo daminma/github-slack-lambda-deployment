@@ -45,6 +45,7 @@ jobs:
 
       - run: |
            echo "Deployment started, please wait ..."
+           sleep 10
 
       - name: Deployment Status 
         uses: ./.github/actions/github-slack-lambda-intergration/actions/deployment-status
