@@ -1,0 +1,70 @@
+name: Relese Build and Deploy
+
+on:
+  push:
+    branches:
+      - develop 
+      - stage
+      - production
+jobs:
+  aws-sts-assume-role:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo "branch is ${{ github.ref }}"
+      - name: Setup POC environment variables
+        if: contains(github.ref, 'develop')         
+        run: |
+           echo "AWS_ACCESS_KEY_ID=${{ secrets.POC_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.POC_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_ASSUME_ROLE=${{ secrets.POC_AWS_ASSUME_ROLE }}" >> $GITHUB_ENV
+           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+           echo "WORKING_DIR=./tf/dev" >> $GITHUB_ENV
+           echo "DEPLOY_ENV=dev" >> $GITHUB_ENV
+      - name: Setup STAGE environment variables
+        if: contains(github.ref, 'stage')
+        run: |
+           echo "AWS_ACCESS_KEY_ID=${{ secrets.STAGE_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.STAGE_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_ASSUME_ROLE=${{ secrets.STAGE_AWS_ASSUME_ROLE }}" >> $GITHUB_ENV
+           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+           echo "WORKING_DIR=./tf/stage" >> $GITHUB_ENV
+           echo "DEPLOY_ENV=stage" >> $GITHUB_ENV
+ 
+
+        ############################ assume-aws-role ##########################################
+      - name: Download assume-aws-role
+        run: |
+           echo "${{ secrets.FN_DIGITAL_TF_PRIVATE_KEY }}" > ./id_rsa
+           chmod 400 id_rsa
+           GIT_SSH_COMMAND='ssh -i id_rsa -o IdentitiesOnly=yes' git clone git@github.com:foxnews/fn-digital-terraform-modules.git .github/actions/fn-digital-terraform-modules
+      - name: Run assume-aws-role
+        uses: ./.github/actions/fn-digital-terraform-modules/github/actions/assume-aws-role
+        with:
+           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+           AWS_ASSUME_ROLE: ${{ env.AWS_ASSUME_ROLE }}
+           # AWS_DEFAULT_REGION: (optional, default is us-east-1)
+           # AWS_DURATION_SECONDS: (optional, default is 900)
+        ############################ assume-aws-role ##########################################
+      - name: checking assume role
+        run: aws sts get-caller-identity
+ 
+      - name: run local build.sh
+        run: ./build.sh
+      - name: Install Terraform
+        uses: little-core-labs/install-terraform@v2.0.0
+        with:
+            version: 0.14.10
+      - name: Terraform setup
+        working-directory: "${{ env.WORKING_DIR }}"
+        run: |
+           pwd
+           terraform version
+           terraform init
+           terraform validate
+           terraform plan
+           terraform apply -auto-approve
+           ls -al
+           terraform state list
+           terraform show

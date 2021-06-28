@@ -1,0 +1,51 @@
+name: Relese Build and Deploy
+
+on:
+  repository_dispatch:
+    types: [lambda_deployment]
+
+jobs:
+  deploy-on-push-to-develop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo "branch is ${{ github.ref }}"
+      - name: Setup PROD environment variables
+        if: github.event.client_payload.environment == 'prod'
+        run: |
+           echo "AWS_ACCESS_KEY_ID=${{ secrets.DMA_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.DMA_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_ASSUME_ROLE=${{ secrets.DMA_AWS_ASSUME_ROLE }}" >> $GITHUB_ENV
+           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+           echo "WORKING_DIR=./tf/prod" >> $GITHUB_ENV
+           echo "DEPLOY_ENV=prod" >> $GITHUB_ENV
+ 
+        ############################ assume-aws-role ##########################################
+      - name: Download assume-aws-role
+        run: |
+           echo "${{ secrets.DMA_DEPLOYER_PRIVATE_KEY }}" > ./id_rsa
+           chmod 400 id_rsa
+           GIT_SSH_COMMAND='ssh -i id_rsa -o IdentitiesOnly=yes' git clone git@github.com:daminma/github-slack-lambda-intergation.git .github/actions/github-slack-lambda-intergation
+      - name: Run assume-aws-role
+        uses: ./.github/actions/github-slack-lambda-intergation/actions/assume-aws-role
+        with:
+           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+           AWS_ASSUME_ROLE: ${{ env.AWS_ASSUME_ROLE }}
+           # AWS_DEFAULT_REGION: (optional, default is us-east-1)
+           # AWS_DURATION_SECONDS: (optional, default is 900)
+        ############################ assume-aws-role ##########################################
+      - name: checking assume role
+        run: aws sts get-caller-identity
+ 
+      - name: Start PRODUCTION deployment
+        run: |
+             echo "payload: ${{ toJson(github.event.client_payload) }}"
+             echo "approver: ${{ github.event.client_payload.approver }}"
+             echo "environment: ${{ github.event.client_payload.environment }}"
+             echo "APPROVER=${{ github.event.client_payload.approver }}" >> $GITHUB_ENV
+      - name: Process Deployment Request
+        uses: ./.github/actions/github-slack-lambda-intergation/actions/process-deployment-request
+        with:
+           DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+           SLACK_TOKEN: ${{ secrets.DMA_SLACKBOT_TOKEN }}

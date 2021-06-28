@@ -1,0 +1,67 @@
+name: Relese Build and Deploy
+
+on:
+  push:
+    branches:
+      - develop 
+      - stage
+      - production
+jobs:
+  aws-sts-assume-role:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo "branch is ${{ github.ref }}"
+      - name: Setup POC environment variables
+        if: contains(github.ref, 'develop')         
+        run: |
+           echo "AWS_ACCESS_KEY_ID=${{ secrets.POC_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.POC_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_ASSUME_ROLE=${{ secrets.POC_AWS_ROLE_TO_ASSUME }}" >> $GITHUB_ENV
+           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+           echo "WORKING_DIR=./tf/dev" >> $GITHUB_ENV
+      - name: Setup STAGE environment variables
+        if: contains(github.ref, 'stage')
+        run: |
+           echo "AWS_ACCESS_KEY_ID=${{ secrets.STAGE_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.STAGE_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_ASSUME_ROLE=${{ secrets.STAGE_AWS_ROLE_TO_ASSUME }}" >> $GITHUB_ENV
+           echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
+           echo "WORKING_DIR=./tf/stage" >> $GITHUB_ENV
+      - name: AWS default Credential
+        continue-on-error: true
+        run: |
+           echo "AWS default Credential"
+           aws sts get-caller-identity
+           aws s3 ls
+      - name: Assume AWS Role Credentials for 15 minutes
+        if: always() 
+        run: |
+           # aws sts assume-role --role-arn "${{ env.AWS_ASSUME_ROLE }}" --role-session-name "POCRoleSession" --region "${{ env.AWS_DEFAULT_REGION }}" 
+           ROLE_CREDS=(`aws sts assume-role --role-arn "${{ env.AWS_ASSUME_ROLE }}"  --role-session-name "POCRoleSession" --duration-seconds 900 --region "${{ env.AWS_DEFAULT_REGION }}" --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" --output text`)
+           echo "AWS_ACCESS_KEY_ID=${ROLE_CREDS[0]}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${ROLE_CREDS[1]}" >> $GITHUB_ENV
+           echo "AWS_SESSION_TOKEN=${ROLE_CREDS[2]}" >> $GITHUB_ENV
+      - name: Use Assume Role Credential
+        if: always()
+        run: |
+           echo "Assume Role Credential"
+           aws sts get-caller-identity
+           aws s3 ls
+
+      - name: Install Terraform
+        uses: little-core-labs/install-terraform@v2.0.0
+        with:
+            version: 0.14.10
+      - name: Terraform setup
+        working-directory: "${{ env.WORKING_DIR }}"
+        run: |
+           pwd
+           terraform version
+           terraform init
+           terraform validate
+           terraform plan
+           terraform apply -auto-approve
+           ls -al
+           terraform state list
+           terraform show
