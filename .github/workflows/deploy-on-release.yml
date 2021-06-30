@@ -14,7 +14,7 @@ jobs:
         if: contains(github.event.release.name, 'deploy:prod')
         run: |
            echo "AWS_ACCESS_KEY_ID=${{ secrets.DMA_AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.DMAE_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+           echo "AWS_SECRET_ACCESS_KEY=${{ secrets.DMA_AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
            echo "AWS_ASSUME_ROLE=${{ secrets.DMA_AWS_ASSUME_ROLE }}" >> $GITHUB_ENV
            echo "AWS_DEFAULT_REGION=us-east-1" >> $GITHUB_ENV
            echo "WORKING_DIR=./tf/prod" >> $GITHUB_ENV
