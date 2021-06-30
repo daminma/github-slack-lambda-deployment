@@ -49,3 +49,15 @@ jobs:
         with:
            DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
            SLACK_TOKEN: ${{ secrets.DMA_SLACKBOT_TOKEN }}
+
+      - run: |
+           echo "Deployment started, please wait ..."
+           sleep 10
+
+      - name: Deployment Status 
+        uses: ./.github/actions/github-slack-lambda-intergration/actions/deployment-status
+        with:
+           DEPLOY_ENV: ${{ env.DEPLOY_ENV }}
+           SLACK_TOKEN: ${{ secrets.DMA_SLACKBOT_TOKEN }}
+           JOB_STATUS: ${{ job.status }}
+
